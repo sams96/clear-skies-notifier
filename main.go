@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -13,8 +14,8 @@ import (
 var metcheckURL = "https://ws1.metcheck.com/ENGINE/v9_0/json.asp?Fc=As"
 
 type location struct {
-	lat float64
-	lon float64
+	lat string
+	lon string
 }
 
 type metcheckResponse struct {
@@ -36,8 +37,8 @@ func checkForecast(loc location) (bool, error) {
 	}
 
 	query := URL.Query()
-	query.Add("lat", strconv.FormatFloat(loc.lat, 'f', 4, 64))
-	query.Add("lon", strconv.FormatFloat(loc.lon, 'f', 4, 64))
+	query.Add("lat", loc.lat)
+	query.Add("lon", loc.lon)
 
 	resp, err := http.Get(URL.String())
 	if err != nil {
@@ -72,7 +73,9 @@ func checkForecast(loc location) (bool, error) {
 }
 
 func main() {
-	isClear, err := checkForecast(location{47.268, 8.4108})
+	lat := os.Getenv("LATITUDE")
+	lon := os.Getenv("LONGITUDE")
+	isClear, err := checkForecast(location{lat, lon})
 	if err != nil {
 		panic(err)
 	}

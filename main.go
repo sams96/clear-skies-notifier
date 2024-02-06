@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
+	"html/template"
 	"net/http"
+	"net/smtp"
 	"net/url"
 	"os"
 	"strconv"
@@ -12,10 +14,11 @@ import (
 )
 
 var metcheckURL = "https://ws1.metcheck.com/ENGINE/v9_0/json.asp?Fc=As"
+var message = `<a href="https://www.metcheck.com/HOBBIES/astronomy_forecast.asp?Lat={{.Lat}}&Lon={{.Lon}}" target="_blank"><img src="https://www.metcheck.com/TRIGGERS/STICKIES/g24_h_astronomy.ASP?Lat={{.Lat}}&Lon={{.Lon}}&LocationName={{.Lat}}/{{.Lon}}&LocType=&Force=TRUE&U=C+DateSelect" border="0" title="Latest Weather Forecast from www.metcheck.com - Click for full forecast"></a>`
 
 type location struct {
-	lat string
-	lon string
+	Lat string
+	Lon string
 }
 
 type metcheckResponse struct {
@@ -37,8 +40,8 @@ func checkForecast(loc location) (bool, error) {
 	}
 
 	query := URL.Query()
-	query.Add("lat", loc.lat)
-	query.Add("lon", loc.lon)
+	query.Add("lat", loc.Lat)
+	query.Add("lon", loc.Lon)
 
 	resp, err := http.Get(URL.String())
 	if err != nil {
@@ -72,15 +75,56 @@ func checkForecast(loc location) (bool, error) {
 	return false, nil
 }
 
+func sendEmail(recipiant, senderAddress, password, host, port string, loc location) error {
+	t, err := template.New("message").Parse(message)
+	if err != nil {
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	err = t.Execute(buf, loc)
+	if err != nil {
+		return err
+	}
+
+	auth := smtp.PlainAuth("", senderAddress, password, host)
+
+	to := []string{recipiant}
+	msg := []byte(
+		"To: " + recipiant + "\r\n" +
+			"Subject: Looks like clear skies tonight\r\n" +
+			"MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n" +
+			buf.String() + "\r\n",
+	)
+
+	err = smtp.SendMail(host+":"+port, auth, senderAddress, to, msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
-	lat := os.Getenv("LATITUDE")
-	lon := os.Getenv("LONGITUDE")
-	isClear, err := checkForecast(location{lat, lon})
+	var (
+		loc           = location{os.Getenv("LATITUDE"), os.Getenv("LONGITUDE")}
+		recipiant     = os.Getenv("RECIPIANT")
+		senderAddress = os.Getenv("SENDER_ADDRESS")
+		password      = os.Getenv("PASSWORD")
+		host          = os.Getenv("HOST")
+		port          = os.Getenv("PORT")
+	)
+	isClear, err := checkForecast(loc)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(isClear)
+	if isClear || true {
+		err = sendEmail(recipiant, senderAddress, password, host, port, loc)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 type utcTime time.Time

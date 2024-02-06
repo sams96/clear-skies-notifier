@@ -119,7 +119,7 @@ func main() {
 		panic(err)
 	}
 
-	if isClear || true {
+	if isClear {
 		err = sendEmail(recipiant, senderAddress, password, host, port, loc)
 		if err != nil {
 			panic(err)

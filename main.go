@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"html/template"
-	"log/slog"
+	"log"
 	"net/http"
 	"net/smtp"
 	"net/url"
@@ -76,7 +76,8 @@ func checkForecast(loc location) (bool, error) {
 		}
 	}
 
-	slog.Info("Forecast bad", slog.Any("seeing indices", indexLog))
+	log.Panicf("forecast bad: %v", indexLog)
+
 	return false, nil
 }
 
@@ -121,13 +122,13 @@ func main() {
 	)
 	isClear, err := checkForecast(loc)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	if isClear {
 		err = sendEmail(recipiant, senderAddress, password, host, port, loc)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}
 }

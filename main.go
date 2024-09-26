@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"net/smtp"
 	"net/url"
@@ -54,9 +55,10 @@ func checkForecast(loc location) (bool, error) {
 		return false, err
 	}
 
+	indexLog := []int64{}
 	for _, forecast := range body.MetcheckData.ForecastLocation.Forecast {
 		t := time.Time(*forecast.Time)
-		n := time.Now()
+		n := time.Now().Add(24 * time.Hour)
 		endOfNight := time.Date(n.Year(), n.Month(), n.Day(), 4, 0, 0, 0, time.Local)
 		if t.After(endOfNight) {
 			continue
@@ -67,11 +69,14 @@ func checkForecast(loc location) (bool, error) {
 			return false, err
 		}
 
+		indexLog = append(indexLog, index)
+
 		if index >= 7 {
 			return true, nil
 		}
 	}
 
+	slog.Info("Forecast bad", slog.Any("seeing indices", indexLog))
 	return false, nil
 }
 

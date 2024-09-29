@@ -43,6 +43,9 @@ func checkForecast(loc location) (bool, error) {
 	query := URL.Query()
 	query.Add("lat", loc.Lat)
 	query.Add("lon", loc.Lon)
+	URL.RawQuery = query.Encode()
+
+	log.Printf("Checking URL: %s", URL.String())
 
 	resp, err := http.Get(URL.String())
 	if err != nil {
@@ -76,7 +79,7 @@ func checkForecast(loc location) (bool, error) {
 		}
 	}
 
-	log.Panicf("forecast bad: %v", indexLog)
+	log.Printf("forecast bad: %v", indexLog)
 
 	return false, nil
 }
